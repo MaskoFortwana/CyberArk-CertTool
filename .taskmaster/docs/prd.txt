@@ -1,0 +1,175 @@
+<context>
+# Overview  
+The CyberArk Certificate Tool is a command-line utility designed to streamline the generation of SSL/TLS certificates for CyberArk infrastructure components (PVWA, PSM, HTML5GW, and PTA). This tool automates the complex process of creating Certificate Signing Requests (CSRs), private keys, and converting signed certificates into the specific formats required by each CyberArk component. It eliminates manual configuration errors and provides a standardized workflow for certificate management in CyberArk environments.
+
+# Core Features  
+## Interactive Menu System
+- Main script provides guided workflow for certificate generation
+- User selects which CyberArk components need certificates (PVWA, PSM, HTML5GW, PTA)
+- Configurable options for key length (4096+ bits) and output directories
+- Clear prompts and validation for all user inputs
+
+## Company Information Management
+- Collects and validates Distinguished Name fields (C, ST, L, O, OU)
+- Provides clear explanations of what each field represents
+- Applies company information consistently across all certificate configurations
+- Validates input format and completeness
+
+## Multi-Server Support with Load Balancing
+- PVWA: Supports multiple servers with optional load balancer configuration
+- PSM: Supports multiple servers with optional load balancer configuration  
+- HTML5GW: Supports multiple servers with optional load balancer configuration
+- PTA: Supports up to 2 nodes with optional load balancer configuration
+- Flexible certificate strategies: single certificate for all servers or unique certificates per server
+
+## Certificate Generation Engine
+- Uses OpenSSL for all cryptographic operations
+- Generates private keys with configurable bit length (4096+ bits)
+- Creates CSRs based on component-specific configuration files
+- Handles Subject Alternative Names (SAN) for multiple FQDNs and load balancers
+
+## Format Conversion and Packaging
+- PVWA: Generates unprotected PFX files
+- PSM: Generates unprotected PFX files
+- HTML5GW: Creates password-protected PFX files, separate key/cert files, and CA chain files in Base64 format with random password generation
+- PTA: Produces key/cert files and CA chain files in Base64 format
+- Includes CA chain integration for all certificate formats
+
+# User Experience  
+## User Personas
+- **Primary**: CyberArk Administrators managing SSL certificate deployment
+- **Secondary**: Security Engineers implementing PKI infrastructure
+- **Tertiary**: DevOps Engineers automating certificate lifecycle management
+
+## Key User Flows
+1. **Initial Setup**: User runs main script, selects components, configures global settings
+2. **Certificate Generation**: System guides through server configuration, generates CSRs and keys
+3. **CA Signing**: User takes CSRs to corporate CA for signing (external process)
+4. **Certificate Import**: User returns signed certificates to designated folders
+5. **Format Conversion**: System converts certificates to required formats for each component
+
+## UI/UX Considerations
+- Command-line interface with clear prompts and error messages
+- Progress indicators for multi-step operations
+- Comprehensive help text and examples for each input field
+- Color-coded output for different types of information (success, warning, error)
+</context>
+<PRD>
+# Technical Architecture  
+## System Components
+- **Main Script**: Entry point with interactive menu system (cyberark-cert-tool.sh)
+- **Configuration Handlers**: Component-specific modules for PVWA, PSM, HTML5GW, PTA
+- **Certificate Engine**: OpenSSL wrapper functions for key/CSR generation
+- **Format Converter**: Utilities for PFX creation, password generation, and file conversion
+- **File Manager**: Directory structure management and file organization
+- **Validation Engine**: Input validation and certificate verification functions
+
+## Data Models
+- **Company Profile**: Distinguished Name fields (C, ST, L, O, OU)
+- **Server Configuration**: FQDN lists, load balancer settings, certificate strategies
+- **Certificate Specification**: Key length, SAN entries, file paths
+- **Output Manifest**: Generated file inventory with naming conventions
+
+## Configuration Files
+- Existing OpenSSL configuration templates (pvwa-cert.cnf, psm-cert.cnf, htmlgw-cert.cnf, pta-cert.cnf)
+- Dynamic configuration generation based on user inputs
+- Template-driven SAN management for multiple servers
+
+## Infrastructure Requirements
+- Linux/Unix environment with Bash shell
+- OpenSSL 1.1.1+ for cryptographic operations
+- Write permissions for certificate output directories
+- Access to corporate Certificate Authority for CSR signing
+
+# Development Roadmap  
+## Phase 1: Core Infrastructure (MVP)
+- Main script framework with basic menu system
+- Company information collection and validation
+- Single-server certificate generation for one component (PVWA)
+- Basic OpenSSL integration for key/CSR generation
+- Simple file organization structure
+
+## Phase 2: Multi-Component Support
+- Extend support to all components (PSM, HTML5GW, PTA)
+- Implement component-specific configuration handlers
+- Add multi-server support without load balancing
+- Create certificate naming conventions and file organization
+
+## Phase 3: Advanced Features
+- Load balancer configuration support for all components
+- Single vs. multiple certificate strategy options
+- Advanced SAN management for complex deployments
+- Enhanced input validation and error handling
+
+## Phase 4: Format Conversion Engine
+- PFX file generation for PVWA/PSM
+- Password-protected PFX for HTML5GW with random password generation
+- Key/cert file separation for HTML5GW and PTA
+- CA chain integration and Base64 format handling
+
+## Phase 5: Production Readiness
+- Comprehensive error handling and recovery
+- Detailed logging and audit trail
+- User documentation and examples
+- Testing framework and validation scripts
+
+# Logical Dependency Chain
+## Foundation Layer (Must be built first)
+1. **Input Validation Framework**: Core validation functions for all user inputs
+2. **OpenSSL Integration**: Basic wrapper functions for cryptographic operations
+3. **Configuration File Management**: Dynamic generation and modification of .cnf files
+4. **File System Management**: Directory creation and file organization utilities
+
+## Component Layer (Can be developed in parallel after foundation)
+1. **Company Information Handler**: Distinguished Name collection and validation
+2. **Main Menu System**: Interactive navigation and option selection
+3. **Single Component Support**: Choose one component (PVWA) for initial implementation
+4. **Basic Certificate Generation**: Key and CSR creation for simple scenarios
+
+## Enhancement Layer (Builds upon component layer)
+1. **Multi-Component Support**: Extend to all CyberArk components
+2. **Multi-Server Configuration**: Support for multiple servers per component
+3. **Load Balancer Integration**: SAN management for load-balanced environments
+4. **Certificate Strategy Options**: Single vs. multiple certificate workflows
+
+## Conversion Layer (Requires working certificate generation)
+1. **Format Conversion Engine**: Component-specific certificate formatting
+2. **Password Management**: Random password generation for HTML5GW
+3. **CA Chain Integration**: Corporate CA certificate handling
+4. **Output Validation**: Verify generated certificates meet requirements
+
+# Risks and Mitigations  
+## Technical Challenges
+- **OpenSSL Version Compatibility**: Test across different OpenSSL versions, provide compatibility checks
+- **File Permission Issues**: Implement proper permission validation and error handling
+- **Configuration File Corruption**: Add backup and restore mechanisms for .cnf files
+- **Certificate Format Validation**: Include verification steps for generated certificates
+
+## MVP Definition and Scope
+- **Minimum Viable Product**: Single-component (PVWA), single-server certificate generation with basic format conversion
+- **Scope Creep Prevention**: Clearly define phase boundaries and dependencies
+- **User Feedback Integration**: Plan for iterative improvement based on initial user testing
+
+## Resource Constraints
+- **Development Time**: Prioritize core functionality over advanced features
+- **Testing Environment**: Ensure access to representative CyberArk infrastructure for validation
+- **Documentation Effort**: Balance comprehensive documentation with development velocity
+
+# Appendix  
+## Technical Specifications
+- **Supported Platforms**: Linux (CentOS 7+, RHEL 7+, Ubuntu 18.04+)
+- **OpenSSL Requirements**: Version 1.1.1 or higher for modern cipher support
+- **Bash Version**: 4.0+ for associative arrays and advanced scripting features
+- **File System**: POSIX-compliant file system with extended attributes support
+
+## Certificate Requirements by Component
+- **PVWA**: RSA 4096-bit, Server Authentication, unprotected PFX format
+- **PSM**: RSA 4096-bit, Server Authentication, unprotected PFX format
+- **HTML5GW**: RSA 4096-bit, Server Authentication, password-protected PFX + separate files
+- **PTA**: RSA 4096-bit, Server Authentication, separate key/cert files only
+
+## Research Findings
+- **CyberArk Documentation**: Review of official certificate installation guides
+- **OpenSSL Best Practices**: Industry standards for certificate generation
+- **Corporate PKI Integration**: Common patterns for enterprise certificate workflows
+</PRD>

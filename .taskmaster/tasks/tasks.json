@@ -1,0 +1,186 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Implement Input Validation Framework",
+        "description": "Create a core validation framework for all user inputs in the CyberArk Certificate Tool",
+        "details": "Develop a comprehensive input validation module that will be used throughout the application to validate user inputs. This should include:\n\n1. Functions to validate Distinguished Name fields (C, ST, L, O, OU)\n2. FQDN validation for server names\n3. Numeric input validation for key length (ensuring 4096+ bits)\n4. Path validation for output directories\n5. Option selection validation\n\nImplement with proper error handling and user-friendly error messages. Use regex patterns for format validation and implement boundary checking for numeric inputs.\n\n```bash\n# Example implementation structure\nfunction validate_distinguished_name() {\n  # Validate country code, state, locality, organization, org unit\n  # Return validation status and error message if applicable\n}\n\nfunction validate_fqdn() {\n  # Validate fully qualified domain name format\n  # Check for valid characters and structure\n}\n\nfunction validate_key_length() {\n  # Ensure key length is numeric and >= 4096\n}\n\nfunction validate_directory() {\n  # Check if directory exists and is writable\n  # Create if needed with proper permissions\n}\n```",
+        "testStrategy": "Create a test script that runs each validation function with valid and invalid inputs. Test edge cases such as empty strings, special characters, and boundary values. Verify that error messages are clear and actionable. Test with various input formats to ensure robustness.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 2,
+        "title": "Develop OpenSSL Integration Module",
+        "description": "Create wrapper functions for OpenSSL operations to handle key generation, CSR creation, and certificate conversions",
+        "details": "Implement a module that provides an abstraction layer over OpenSSL commands. This module should:\n\n1. Check for OpenSSL availability and version compatibility (1.1.1+)\n2. Implement functions for private key generation with configurable bit length\n3. Create functions for CSR generation using OpenSSL configuration files\n4. Implement certificate format conversion utilities (PEM to PFX, etc.)\n5. Handle Subject Alternative Names (SAN) for multiple FQDNs\n\n```bash\nfunction check_openssl_version() {\n  # Verify OpenSSL is installed and version is 1.1.1+\n  # Return status and version information\n}\n\nfunction generate_private_key() {\n  # Generate RSA private key with specified bit length\n  # openssl genrsa -out \"$key_path\" \"$key_length\"\n}\n\nfunction generate_csr() {\n  # Generate CSR using config file\n  # openssl req -new -key \"$key_path\" -out \"$csr_path\" -config \"$config_file\"\n}\n\nfunction create_pfx() {\n  # Convert certificate to PFX format\n  # openssl pkcs12 -export -out \"$pfx_path\" -inkey \"$key_path\" -in \"$cert_path\" -certfile \"$ca_chain\"\n}\n```",
+        "testStrategy": "Create a test script that verifies each OpenSSL wrapper function. Test key generation with different bit lengths. Verify CSR generation produces valid CSRs. Test format conversion with sample certificates. Verify error handling when OpenSSL commands fail.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 3,
+        "title": "Implement Configuration File Management",
+        "description": "Create a system to dynamically generate and modify OpenSSL configuration files based on user inputs",
+        "details": "Develop a module to handle the creation and modification of OpenSSL configuration files (.cnf) for different CyberArk components. This should:\n\n1. Load existing template files (pvwa-cert.cnf, psm-cert.cnf, htmlgw-cert.cnf, pta-cert.cnf)\n2. Dynamically update templates with user-provided Distinguished Name information\n3. Add Subject Alternative Names (SAN) based on server and load balancer configurations\n4. Generate component-specific configurations with appropriate extensions\n5. Implement backup and restore mechanisms for configuration files\n\n```bash\nfunction load_config_template() {\n  # Load the appropriate template based on component type\n  # Return the template content\n}\n\nfunction update_distinguished_name() {\n  # Update the DN fields in the config template\n  # Replace placeholders with actual values\n}\n\nfunction add_subject_alternative_names() {\n  # Add SAN entries for multiple servers and load balancers\n  # Format properly for OpenSSL config\n}\n\nfunction write_config_file() {\n  # Write the updated configuration to a new file\n  # Create backup of existing file if present\n}\n```",
+        "testStrategy": "Test with sample templates and verify that the generated configuration files are valid for OpenSSL. Test with various combinations of Distinguished Name fields and SAN entries. Verify that backups are created correctly and can be restored if needed.",
+        "priority": "high",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 4,
+        "title": "Create File System Management Module",
+        "description": "Develop utilities for directory creation, file organization, and permission management",
+        "details": "Implement a file system management module that handles all file and directory operations. This module should:\n\n1. Create directory structures for certificate output with proper permissions\n2. Implement consistent naming conventions for generated files\n3. Organize files by component type and server name\n4. Handle file operations with proper error checking and recovery\n5. Implement file inventory tracking for generated certificates\n\n```bash\nfunction create_directory_structure() {\n  # Create directories for each component and server\n  # Set appropriate permissions\n  # Return status of operation\n}\n\nfunction generate_filename() {\n  # Create standardized filenames based on component, server, and file type\n  # Example: pvwa-server1-key.pem\n}\n\nfunction organize_files() {\n  # Move generated files to appropriate directories\n  # Create symbolic links if needed\n}\n\nfunction track_generated_files() {\n  # Maintain an inventory of all generated files\n  # Store metadata about each file (type, path, timestamp)\n}\n```",
+        "testStrategy": "Test directory creation with various permission scenarios. Verify naming conventions are consistent and follow best practices. Test file organization with sample certificate files. Verify inventory tracking accurately records all generated files.",
+        "priority": "medium",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 5,
+        "title": "Implement Company Information Handler",
+        "description": "Create a module to collect, validate, and store Distinguished Name fields for certificate generation",
+        "details": "Develop a module that handles the collection and management of company information for certificate Distinguished Names. This module should:\n\n1. Prompt for and collect Country (C), State/Province (ST), Locality (L), Organization (O), and Organizational Unit (OU)\n2. Provide clear explanations of each field and format requirements\n3. Validate input format using the validation framework\n4. Store collected information for use across all certificate configurations\n5. Allow for review and modification of stored information\n\n```bash\nfunction collect_company_information() {\n  # Prompt for each DN field with explanations\n  # Use validation framework to ensure correct format\n  # Store validated information\n}\n\nfunction display_company_information() {\n  # Show currently stored DN information\n  # Format for easy reading\n}\n\nfunction modify_company_information() {\n  # Allow user to change specific DN fields\n  # Revalidate modified fields\n}\n\nfunction apply_company_information() {\n  # Apply stored DN information to configuration templates\n  # Return formatted DN string for OpenSSL\n}\n```",
+        "testStrategy": "Test with various input combinations, including valid and invalid formats. Verify that explanations are clear and helpful. Test storage and retrieval of company information. Verify that information is correctly applied to configuration templates.",
+        "priority": "medium",
+        "dependencies": [
+          1,
+          3
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 6,
+        "title": "Develop Main Menu System",
+        "description": "Create the interactive menu system that guides users through the certificate generation workflow",
+        "details": "Implement the main script (cyberark-cert-tool.sh) with an interactive menu system that provides a guided workflow. This should:\n\n1. Display a welcome message and tool overview\n2. Provide component selection (PVWA, PSM, HTML5GW, PTA)\n3. Offer configuration options for key length and output directories\n4. Guide users through the certificate generation process with clear prompts\n5. Implement color-coded output for different types of information\n6. Include help text and examples for each step\n\n```bash\n#!/bin/bash\n# cyberark-cert-tool.sh - Main script for CyberArk Certificate Tool\n\n# Source required modules\nsource ./modules/validation.sh\nsource ./modules/openssl.sh\nsource ./modules/config.sh\nsource ./modules/filesystem.sh\nsource ./modules/company_info.sh\n\nfunction display_welcome() {\n  # Display welcome message and tool overview\n  # Show version information\n}\n\nfunction display_main_menu() {\n  # Show main menu options\n  # Handle user selection\n}\n\nfunction component_selection() {\n  # Allow selection of CyberArk components\n  # Support multiple selections\n}\n\nfunction configure_options() {\n  # Set key length, output directories, etc.\n  # Validate and store configuration\n}\n\nfunction main() {\n  display_welcome\n  display_main_menu\n  # Main program flow\n}\n\nmain\n```",
+        "testStrategy": "Test the menu system with various input sequences. Verify that navigation between menus works correctly. Test help text display and formatting. Verify that color-coded output is consistent and readable. Test with invalid inputs to ensure proper error handling.",
+        "priority": "medium",
+        "dependencies": [
+          1,
+          4,
+          5
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 7,
+        "title": "Implement PVWA Certificate Generation",
+        "description": "Develop the specific module for generating certificates for PVWA servers",
+        "details": "Create a PVWA-specific certificate generation module that handles the unique requirements for Password Vault Web Access servers. This module should:\n\n1. Collect PVWA server information (FQDNs)\n2. Support multiple servers with optional load balancer configuration\n3. Generate RSA 4096-bit keys and CSRs with Server Authentication\n4. Create unprotected PFX files from signed certificates\n5. Implement single vs. multiple certificate strategy options\n\n```bash\nfunction collect_pvwa_servers() {\n  # Prompt for PVWA server FQDNs\n  # Option to add load balancer FQDN\n  # Validate all inputs\n}\n\nfunction configure_pvwa_certificate_strategy() {\n  # Single certificate for all servers or individual certificates\n  # Store strategy selection\n}\n\nfunction generate_pvwa_certificates() {\n  # Generate keys and CSRs based on strategy\n  # Use OpenSSL module for cryptographic operations\n  # Create appropriate configuration files\n}\n\nfunction convert_pvwa_certificates() {\n  # Convert signed certificates to unprotected PFX format\n  # Include CA chain in PFX\n}\n```",
+        "testStrategy": "Test with various server configurations, including single server, multiple servers, and load balancer scenarios. Verify that generated CSRs include correct SANs. Test PFX conversion with sample certificates. Verify that both certificate strategies work correctly.",
+        "priority": "high",
+        "dependencies": [
+          2,
+          3,
+          5
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 8,
+        "title": "Implement PSM Certificate Generation",
+        "description": "Develop the specific module for generating certificates for PSM servers",
+        "details": "Create a PSM-specific certificate generation module that handles the unique requirements for Privileged Session Manager servers. This module should:\n\n1. Collect PSM server information (FQDNs)\n2. Support multiple servers with optional load balancer configuration\n3. Generate RSA 4096-bit keys and CSRs with Server Authentication\n4. Create unprotected PFX files from signed certificates\n5. Implement single vs. multiple certificate strategy options\n\n```bash\nfunction collect_psm_servers() {\n  # Prompt for PSM server FQDNs\n  # Option to add load balancer FQDN\n  # Validate all inputs\n}\n\nfunction configure_psm_certificate_strategy() {\n  # Single certificate for all servers or individual certificates\n  # Store strategy selection\n}\n\nfunction generate_psm_certificates() {\n  # Generate keys and CSRs based on strategy\n  # Use OpenSSL module for cryptographic operations\n  # Create appropriate configuration files\n}\n\nfunction convert_psm_certificates() {\n  # Convert signed certificates to unprotected PFX format\n  # Include CA chain in PFX\n}\n```",
+        "testStrategy": "Test with various server configurations, including single server, multiple servers, and load balancer scenarios. Verify that generated CSRs include correct SANs. Test PFX conversion with sample certificates. Verify that both certificate strategies work correctly.",
+        "priority": "medium",
+        "dependencies": [
+          2,
+          3,
+          5,
+          7
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 9,
+        "title": "Implement HTML5GW Certificate Generation",
+        "description": "Develop the specific module for generating certificates for HTML5 Gateway servers",
+        "details": "Create an HTML5GW-specific certificate generation module that handles the unique requirements for HTML5 Gateway servers. This module should:\n\n1. Collect HTML5GW server information (FQDNs)\n2. Support multiple servers with optional load balancer configuration\n3. Generate RSA 4096-bit keys and CSRs with Server Authentication\n4. Create password-protected PFX files with random password generation\n5. Generate separate key/cert files and CA chain files in Base64 format\n\n```bash\nfunction collect_html5gw_servers() {\n  # Prompt for HTML5GW server FQDNs\n  # Option to add load balancer FQDN\n  # Validate all inputs\n}\n\nfunction generate_random_password() {\n  # Generate secure random password for PFX protection\n  # Store password securely for user reference\n}\n\nfunction generate_html5gw_certificates() {\n  # Generate keys and CSRs\n  # Use OpenSSL module for cryptographic operations\n  # Create appropriate configuration files\n}\n\nfunction convert_html5gw_certificates() {\n  # Convert signed certificates to password-protected PFX format\n  # Create separate key/cert files in Base64 format\n  # Generate CA chain files\n}\n```",
+        "testStrategy": "Test with various server configurations. Verify that password generation is secure and random. Test PFX conversion with sample certificates. Verify that Base64 encoding is correct for key/cert files. Test with and without load balancer configuration.",
+        "priority": "medium",
+        "dependencies": [
+          2,
+          3,
+          5,
+          7
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 10,
+        "title": "Implement PTA Certificate Generation",
+        "description": "Develop the specific module for generating certificates for Privileged Threat Analytics servers",
+        "details": "Create a PTA-specific certificate generation module that handles the unique requirements for Privileged Threat Analytics servers. This module should:\n\n1. Collect PTA server information (FQDNs) for up to 2 nodes\n2. Support optional load balancer configuration\n3. Generate RSA 4096-bit keys and CSRs with Server Authentication\n4. Produce key/cert files and CA chain files in Base64 format\n5. Implement appropriate file organization for PTA certificates\n\n```bash\nfunction collect_pta_servers() {\n  # Prompt for PTA server FQDNs (up to 2 nodes)\n  # Option to add load balancer FQDN\n  # Validate all inputs\n}\n\nfunction generate_pta_certificates() {\n  # Generate keys and CSRs\n  # Use OpenSSL module for cryptographic operations\n  # Create appropriate configuration files\n}\n\nfunction convert_pta_certificates() {\n  # Create separate key/cert files in Base64 format\n  # Generate CA chain files\n  # No PFX creation for PTA\n}\n\nfunction organize_pta_certificates() {\n  # Organize files according to PTA requirements\n  # Create appropriate directory structure\n}\n```",
+        "testStrategy": "Test with single node and dual node configurations. Verify that Base64 encoding is correct for key/cert files. Test with and without load balancer configuration. Verify that file organization meets PTA requirements.",
+        "priority": "medium",
+        "dependencies": [
+          2,
+          3,
+          5,
+          7
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 11,
+        "title": "Implement Format Conversion Engine",
+        "description": "Create a comprehensive format conversion engine for transforming certificates into component-specific formats",
+        "details": "Develop a format conversion engine that handles the transformation of signed certificates into the specific formats required by each CyberArk component. This module should:\n\n1. Implement PFX creation for PVWA and PSM (unprotected)\n2. Create password-protected PFX files for HTML5GW with random password generation\n3. Generate separate key/cert files for HTML5GW and PTA in Base64 format\n4. Handle CA chain integration for all certificate formats\n5. Implement verification of converted certificates\n\n```bash\nfunction create_unprotected_pfx() {\n  # Create PFX without password protection for PVWA/PSM\n  # openssl pkcs12 -export -out \"$pfx_path\" -inkey \"$key_path\" -in \"$cert_path\" -certfile \"$ca_chain\" -passout pass:\n}\n\nfunction create_protected_pfx() {\n  # Create password-protected PFX for HTML5GW\n  # Generate and store random password\n  # openssl pkcs12 -export -out \"$pfx_path\" -inkey \"$key_path\" -in \"$cert_path\" -certfile \"$ca_chain\" -passout pass:\"$password\"\n}\n\nfunction create_base64_files() {\n  # Convert certificates and keys to Base64 format\n  # Create separate files for key, cert, and CA chain\n}\n\nfunction verify_converted_certificates() {\n  # Verify that converted certificates are valid\n  # Check format, content, and integrity\n}\n```",
+        "testStrategy": "Test each conversion function with sample certificates. Verify that PFX files are created correctly with and without password protection. Test Base64 encoding for key/cert files. Verify that CA chain integration works correctly for all formats.",
+        "priority": "high",
+        "dependencies": [
+          2,
+          7,
+          8,
+          9,
+          10
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 12,
+        "title": "Implement Comprehensive Error Handling and Logging",
+        "description": "Develop robust error handling, recovery mechanisms, and logging throughout the application",
+        "details": "Create a comprehensive error handling and logging system that provides clear feedback and recovery options. This module should:\n\n1. Implement consistent error handling across all modules\n2. Provide detailed error messages with troubleshooting guidance\n3. Create a logging system with configurable verbosity levels\n4. Implement recovery mechanisms for common failure scenarios\n5. Add audit trail functionality for certificate operations\n\n```bash\nfunction log_message() {\n  # Log message with timestamp and severity level\n  # Support different verbosity levels\n}\n\nfunction handle_error() {\n  # Process error condition with appropriate response\n  # Log error details\n  # Provide user guidance for resolution\n}\n\nfunction create_audit_entry() {\n  # Record certificate operation in audit log\n  # Include operation type, files affected, and timestamp\n}\n\nfunction implement_recovery() {\n  # Attempt to recover from specific error conditions\n  # Clean up partial operations if needed\n}\n```",
+        "testStrategy": "Test error handling with various failure scenarios. Verify that error messages are clear and actionable. Test logging at different verbosity levels. Verify that audit trail correctly records all certificate operations. Test recovery mechanisms for common failure scenarios.",
+        "priority": "high",
+        "dependencies": [
+          1,
+          2,
+          3,
+          4,
+          6,
+          11
+        ],
+        "status": "pending",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-07-30T14:01:30.834Z",
+      "updated": "2025-07-30T14:01:30.834Z",
+      "description": "Tasks for master context"
+    }
+  }
+}
