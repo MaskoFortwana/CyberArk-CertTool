@@ -16,6 +16,8 @@ This tool streamlines the certificate generation process for CyberArk environmen
 - **PSM** (Privileged Session Manager) - Unprotected PFX files  
 - **HTML5GW** (HTML5 Gateway) - Password-protected PFX + separate Base64 files
 - **PTA** (Privileged Threat Analytics) - Separate key/cert files in Base64 format
+- **VAULT** (Digital Vault) - Unprotected PFX file
+
 
 ## Prerequisites
 
