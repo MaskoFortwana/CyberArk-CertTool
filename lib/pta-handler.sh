@@ -313,6 +313,8 @@ EOF
    Select option 3 (Convert Signed Certificates) and choose PTA.
    
    This will generate:
+   - $pta_dir/pta.pfx (PFX file; password protection optional)
+   - $pta_dir/pta-password.txt (if password protection enabled)
    - $pta_dir/pta.key (private key in Base64 format)
    - $pta_dir/pta.crt (certificate in Base64 format)
    - $pta_dir/ca-chain.crt (CA chain in Base64 format)
@@ -361,10 +363,12 @@ EOF
    
    Select option 3 (Convert Signed Certificates) and choose PTA.
    
-   This will generate for each server:
+This will generate for each server:
 EOF
         for ((i=1; i<=num_servers; i++)); do
             cat >> "$instructions_file" << EOF
+   - $pta_dir/server$i/pta-server$i.pfx (PFX file; password protection optional)
+   - $pta_dir/server$i/pta-server$i-password.txt (if password protection enabled)
    - $pta_dir/server$i/pta-server$i.key (private key in Base64 format)
    - $pta_dir/server$i/pta-server$i.crt (certificate in Base64 format)
    - $pta_dir/server$i/ca-chain.crt (CA chain in Base64 format)
@@ -382,9 +386,9 @@ EOF
 
 IMPORTANT NOTES:
 - Keep private key files (.key) secure and never share them
-- PTA requires certificates in Base64 (PEM) format with separate key and cert files
-- No PFX files are generated for PTA (not required)
-- Ensure proper file permissions on certificate files
+- PTA PFX creation is supported during conversion; password is optional
+- Certificate/key files are kept in Base64 (PEM) format alongside PFX
+- Ensure proper file permissions on certificate and password files
 - Test the certificates in a non-production environment first
 
 EOF

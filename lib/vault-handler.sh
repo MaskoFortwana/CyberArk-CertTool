@@ -292,15 +292,23 @@ EOF
 
     cat >> "$instructions_file" << EOF
 
-3. NEXT STEPS
-   ==========
-   No PFX conversion is performed for Vault by this tool.
-   Use the key and signed certificate per your Vault deployment procedures.
+3. CONVERT TO PFX FORMAT
+   ======================
+   
+   After placing the signed certificate files for each node, run the conversion tool:
+   $ ./cyberark-cert-tool.sh
+   
+   Select option 3 (Convert Signed Certificates) and choose Vault.
+   
+   This will generate for each node:
+   - vault-nodeX.pfx (password-protected PFX file)
+   - vault-nodeX-password.txt (randomly generated PFX password; chmod 600)
 
 IMPORTANT NOTES:
 - Each node has a unique private key (.key)
-- Keep private keys secure and never share them
-- Ensure proper file permissions on certificate files
+- PFX password protection is mandatory for Vault and is generated automatically
+- Keep private keys and password files secure and never share them
+- Ensure proper file permissions on certificate and password files
 - Test in non-production before deploying
 
 EOF

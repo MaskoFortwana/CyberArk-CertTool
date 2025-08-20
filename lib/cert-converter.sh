@@ -39,6 +39,11 @@ convert_certificates() {
         component_dirs+=("$OUTPUT_DIR/pta")
     fi
     
+    if [[ -d "$OUTPUT_DIR/vault" ]]; then
+        components+=("VAULT")
+        component_dirs+=("$OUTPUT_DIR/vault")
+    fi
+    
     if [[ ${#components[@]} -eq 0 ]]; then
         log_error "No certificate directories found. Generate certificates first."
         return 1
@@ -98,6 +103,9 @@ convert_component_certificates() {
         "PTA")
             convert_pta_certificates "$component_dir"
             ;;
+        "VAULT")
+            convert_vault_certificates "$component_dir"
+            ;;
         *)
             log_error "Unknown component: $component"
             return 1
@@ -123,6 +131,49 @@ convert_pvwa_certificates() {
             fi
         done
     fi
+}
+
+# Helper: prompt for PFX password protection; returns password to use (empty for none) and writes password file if needed
+prompt_pfx_password() {
+    local component="$1"      # PVWA | PSM | HTML5GW | VAULT
+    local base_name="$2"      # base filename prefix
+    local cert_dir="$3"       # directory where files live
+
+    # VAULT must be password protected
+    if [[ "$component" == "VAULT" ]]; then
+        local pwd=$(generate_random_password 24)
+        echo "$pwd" > "$cert_dir/${base_name}-password.txt"
+        chmod 600 "$cert_dir/${base_name}-password.txt"
+        echo "$pwd"
+        return 0
+    fi
+
+    # Choose default based on component
+    local default_choice="n"
+    if [[ "$component" == "HTML5GW" ]]; then
+        default_choice="y"
+    fi
+
+    while true; do
+        read -p "Protect $component PFX with password? (y/n) [${default_choice}]: " ans
+        ans="${ans:-$default_choice}"
+        case "$ans" in
+            [Yy]*)
+                local pwd=$(generate_random_password 24)
+                echo "$pwd" > "$cert_dir/${base_name}-password.txt"
+                chmod 600 "$cert_dir/${base_name}-password.txt"
+                echo "$pwd"
+                return 0
+                ;;
+            [Nn]*)
+                echo ""
+                return 0
+                ;;
+            *)
+                log_error "Please answer y or n"
+                ;;
+        esac
+    done
 }
 
 # Convert single PVWA certificate
@@ -155,12 +206,16 @@ convert_single_pvwa_cert() {
         return 1
     fi
     
-    # Create unprotected PFX
-    if create_pfx "$cert_file" "$key_file" "$ca_file" "$pfx_file" ""; then
+    # Decide password usage
+    local pfx_password
+    pfx_password=$(prompt_pfx_password "PVWA" "$base_name" "$cert_dir")
+
+    # Create PFX
+    if create_pfx "$cert_file" "$key_file" "$ca_file" "$pfx_file" "$pfx_password"; then
         log_success "PVWA PFX created: $pfx_file"
         
         # Verify the PFX
-        if verify_pfx "$pfx_file" ""; then
+        if verify_pfx "$pfx_file" "$pfx_password"; then
             log_success "PVWA PFX verification successful"
         fi
     else
@@ -219,12 +274,16 @@ convert_single_psm_cert() {
         return 1
     fi
     
-    # Create unprotected PFX
-    if create_pfx "$cert_file" "$key_file" "$ca_file" "$pfx_file" ""; then
+    # Decide password usage
+    local pfx_password
+    pfx_password=$(prompt_pfx_password "PSM" "$base_name" "$cert_dir")
+
+    # Create PFX
+    if create_pfx "$cert_file" "$key_file" "$ca_file" "$pfx_file" "$pfx_password"; then
         log_success "PSM PFX created: $pfx_file"
         
         # Verify the PFX
-        if verify_pfx "$pfx_file" ""; then
+        if verify_pfx "$pfx_file" "$pfx_password"; then
             log_success "PSM PFX verification successful"
         fi
     else
@@ -284,15 +343,20 @@ convert_single_htmlgw_cert() {
         return 1
     fi
     
-    # Generate random password for PFX
-    local pfx_password=$(generate_random_password 24)
-    echo "$pfx_password" > "$password_file"
-    chmod 600 "$password_file"
-    
-    # Create password-protected PFX
+    # Decide password usage (default yes for HTML5GW)
+    local pfx_password
+    pfx_password=$(prompt_pfx_password "HTML5GW" "$base_name" "$cert_dir")
+
+    # Save password if set
+    if [[ -n "$pfx_password" ]]; then
+        echo "$pfx_password" > "$password_file"
+        chmod 600 "$password_file"
+        log_success "Password saved to: $password_file"
+    fi
+
+    # Create PFX (protected if password provided)
     if create_pfx "$cert_file" "$key_file" "$ca_file" "$pfx_file" "$pfx_password"; then
         log_success "HTML5GW PFX created: $pfx_file"
-        log_success "Password saved to: $password_file"
         
         # Verify the PFX
         if verify_pfx "$pfx_file" "$pfx_password"; then
@@ -333,6 +397,63 @@ convert_pta_certificates() {
     fi
 }
 
+# Convert VAULT certificates (password-protected PFX is mandatory)
+convert_vault_certificates() {
+    local vault_dir="$1"
+
+    log_info "Converting Vault certificates to password-protected PFX files..."
+
+    # Vault structure: node directories node1, node2, ... with vault-nodeX.key/crt
+    for node_dir in "$vault_dir"/node*; do
+        if [[ -d "$node_dir" ]]; then
+            convert_single_vault_cert "$node_dir"
+        fi
+    done
+}
+
+# Convert single VAULT certificate (mandatory password)
+convert_single_vault_cert() {
+    local cert_dir="$1"
+    local node_name=$(basename "$cert_dir")
+    local node_num=${node_name#node}
+    local base_name="vault-node$node_num"
+
+    local cert_file="$cert_dir/${base_name}.crt"
+    local key_file="$cert_dir/${base_name}.key"
+    local ca_file="$cert_dir/ca-chain.crt"
+    local pfx_file="$cert_dir/${base_name}.pfx"
+    local password_file="$cert_dir/${base_name}-password.txt"
+
+    # Check required files
+    if [[ ! -f "$cert_file" ]]; then
+        log_error "Certificate file not found: $cert_file"
+        log_error "Please place the signed certificate from your CA in this location"
+        return 1
+    fi
+
+    if [[ ! -f "$key_file" ]]; then
+        log_error "Private key file not found: $key_file"
+        return 1
+    fi
+
+    # Mandatory password protection
+    local pfx_password
+    pfx_password=$(prompt_pfx_password "VAULT" "$base_name" "$cert_dir")
+    echo "$pfx_password" > "$password_file"
+    chmod 600 "$password_file"
+    log_success "Password saved to: $password_file"
+
+    if create_pfx "$cert_file" "$key_file" "$ca_file" "$pfx_file" "$pfx_password"; then
+        log_success "Vault PFX created: $pfx_file"
+        if verify_pfx "$pfx_file" "$pfx_password"; then
+            log_success "Vault PFX verification successful"
+        fi
+    else
+        log_error "Failed to create Vault PFX"
+        return 1
+    fi
+}
+
 # Convert single PTA certificate
 convert_single_pta_cert() {
     local cert_dir="$1"
@@ -349,6 +470,8 @@ convert_single_pta_cert() {
     local cert_file="$cert_dir/${base_name}.crt"
     local key_file="$cert_dir/${base_name}.key"
     local ca_file="$cert_dir/ca-chain.crt"
+    local pfx_file="$cert_dir/${base_name}.pfx"
+    local password_file="$cert_dir/${base_name}-password.txt"
     
     # Check required files
     if [[ ! -f "$cert_file" ]]; then
@@ -370,11 +493,76 @@ convert_single_pta_cert() {
     fi
     
     # Verify certificate and key match
-    if verify_key_cert_match "$key_file" "$cert_file"; then
-        log_success "PTA certificate files prepared in Base64 format"
-    else
+    if ! verify_key_cert_match "$key_file" "$cert_file"; then
         log_error "Certificate and key verification failed"
         return 1
+    fi
+
+    # Optionally collect CA chain components from user
+    echo ""
+    echo -e "${BLUE}Optional: Include CA certificates in PTA PFX${NC}"
+    echo "You can provide paths to an Intermediate CA and/or Root CA certificate to embed in the PFX."
+    echo "Leave blank to skip. If both are blank, I'll use $ca_file if it exists."
+
+    local int_ca_path="" root_ca_path="" chain_file=""
+    read -p "Path to Intermediate CA certificate (optional): " int_ca_path || true
+    read -p "Path to Root CA certificate (optional): " root_ca_path || true
+
+    # Normalize and validate provided paths; ensure PEM format
+    local tmp_chain=""
+    if [[ -n "$int_ca_path" ]] && [[ -f "$int_ca_path" ]]; then
+        ensure_base64_format "$int_ca_path"
+        tmp_chain=$(mktemp)
+        cat "$int_ca_path" >> "$tmp_chain"
+    elif [[ -n "$int_ca_path" ]]; then
+        log_warning "Intermediate CA path not found, ignoring: $int_ca_path"
+    fi
+
+    if [[ -n "$root_ca_path" ]] && [[ -f "$root_ca_path" ]]; then
+        ensure_base64_format "$root_ca_path"
+        if [[ -z "$tmp_chain" ]]; then
+            tmp_chain=$(mktemp)
+        fi
+        # Append after intermediate so chain order is correct
+        cat "$root_ca_path" >> "$tmp_chain"
+    elif [[ -n "$root_ca_path" ]]; then
+        log_warning "Root CA path not found, ignoring: $root_ca_path"
+    fi
+
+    if [[ -n "$tmp_chain" ]]; then
+        chain_file="$tmp_chain"
+    elif [[ -f "$ca_file" ]]; then
+        chain_file="$ca_file"
+    else
+        chain_file=""
+    fi
+
+    # Decide password usage for PTA (optional)
+    local pfx_password
+    pfx_password=$(prompt_pfx_password "PTA" "$base_name" "$cert_dir")
+
+    # Save password if set
+    if [[ -n "$pfx_password" ]]; then
+        echo "$pfx_password" > "$password_file"
+        chmod 600 "$password_file"
+        log_success "Password saved to: $password_file"
+    fi
+
+    # Create PFX (protected if password provided)
+    if create_pfx "$cert_file" "$key_file" "$chain_file" "$pfx_file" "$pfx_password"; then
+        log_success "PTA PFX created: $pfx_file"
+        if verify_pfx "$pfx_file" "$pfx_password"; then
+            log_success "PTA PFX verification successful"
+        fi
+    else
+        log_error "Failed to create PTA PFX"
+        if [[ -n "$tmp_chain" ]]; then rm -f "$tmp_chain"; fi
+        return 1
+    fi
+
+    # Cleanup temporary chain file if used
+    if [[ -n "$tmp_chain" ]]; then
+        rm -f "$tmp_chain"
     fi
 }
 
@@ -442,11 +630,14 @@ show_conversion_summary() {
     echo "Component Directory: $component_dir"
     echo ""
     
-    case "$component" in
-        "PVWA"|"PSM")
+case "$component" in
+        "PVWA"|"PSM"|"PTA")
             echo "Generated Files:"
             find "$component_dir" -name "*.pfx" -type f | while read file; do
                 echo "  PFX: $file"
+            done
+            find "$component_dir" -name "*-password.txt" -type f | while read file; do
+                echo "  Password: $file"
             done
             ;;
         "HTML5GW")
@@ -456,15 +647,6 @@ show_conversion_summary() {
             done
             find "$component_dir" -name "*-password.txt" -type f | while read file; do
                 echo "  Password: $file"
-            done
-            ;;
-        "PTA")
-            echo "Certificate Files (Base64 format):"
-            find "$component_dir" -name "*.crt" -type f | while read file; do
-                echo "  Certificate: $file"
-            done
-            find "$component_dir" -name "*.key" -type f | while read file; do
-                echo "  Private Key: $file"
             done
             ;;
     esac
