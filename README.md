@@ -12,16 +12,16 @@ This tool streamlines the certificate generation process for CyberArk environmen
 
 ## Supported Components
 
-- **PVWA** (Password Vault Web Access) - Unprotected PFX files
-- **PSM** (Privileged Session Manager) - Unprotected PFX files  
+- **PVWA** (Password Vault Web Access) - PFX Files
+- **PSM** (Privileged Session Manager) - PFX Files  
 - **HTML5GW** (HTML5 Gateway) - Password-protected PFX + separate Base64 files
-- **PTA** (Privileged Threat Analytics) - Separate key/cert files in Base64 format
-- **VAULT** (Digital Vault) - Unprotected PFX file
+- **PTA** (Privileged Threat Analytics) - PFX Files with whole cert chain
+- **VAULT** (Digital Vault) - PFX Files
 
 
 ## Prerequisites
 
-- Linux/Unix environment with Bash 4.0+
+- Linux/Unix environment with Bash 4.0+ OR macOS
 - OpenSSL 1.1.1 or higher
 - Write permissions for certificate output directories
 - Access to corporate Certificate Authority for CSR signing
