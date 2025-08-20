@@ -14,12 +14,14 @@ COMPANY_INFO=()
 SELECTED_COMPONENTS=()
 
 # Source library modules
+source "$SCRIPT_DIR/lib/utils.sh"
 source "$SCRIPT_DIR/lib/company-info.sh"
 source "$SCRIPT_DIR/lib/openssl-integration.sh"
 source "$SCRIPT_DIR/lib/pvwa-handler.sh"
 source "$SCRIPT_DIR/lib/psm-handler.sh"
 source "$SCRIPT_DIR/lib/htmlgw-handler.sh"
 source "$SCRIPT_DIR/lib/pta-handler.sh"
+source "$SCRIPT_DIR/lib/vault-handler.sh"
 source "$SCRIPT_DIR/lib/cert-converter.sh"
 
 # Color codes for output
@@ -59,6 +61,7 @@ show_banner() {
     echo "  • PSM (Privileged Session Manager)"
     echo "  • HTML5GW (HTML5 Gateway)"
     echo "  • PTA (Privileged Threat Analytics)"
+    echo "  • Vault (Digital Vault)"
     echo ""
 }
 
@@ -82,8 +85,9 @@ show_component_menu() {
     echo "2. PSM (Privileged Session Manager)"  
     echo "3. HTML5GW (HTML5 Gateway)"
     echo "4. PTA (Privileged Threat Analytics)"
-    echo "5. All Components"
-    echo "6. Back to Main Menu"
+    echo "5. Vault (Digital Vault)"
+    echo "6. All Components"
+    echo "7. Back to Main Menu"
     echo ""
 }
 
@@ -102,7 +106,7 @@ check_prerequisites() {
     log_info "OpenSSL version: $openssl_version"
     
     # Check if configuration files exist
-    local config_files=("pvwa-cert.cnf" "psm-cert.cnf" "htmlgw-cert.cnf" "pta-cert.cnf")
+    local config_files=("pvwa-cert.cnf" "psm-cert.cnf" "htmlgw-cert.cnf" "pta-cert.cnf" "vault-cert.cnf")
     for config in "${config_files[@]}"; do
         if [[ ! -f "$SCRIPT_DIR/$config" ]]; then
             log_error "Configuration file $config not found in $SCRIPT_DIR"
@@ -125,7 +129,7 @@ validate_input() {
             fi
             ;;
         "component_choice")
-            if [[ ! "$input" =~ ^[1-6]$ ]]; then
+            if [[ ! "$input" =~ ^[1-7]$ ]]; then
                 return 1
             fi
             ;;
@@ -217,6 +221,12 @@ configure_global_settings() {
         log_success "Created output directory: $OUTPUT_DIR"
     fi
     
+    # Company information (collect once globally)
+    echo ""
+    echo "Company Information Configuration:"
+    echo "This information (C, ST, L, O, OU) will be applied to all certificates."
+    collect_company_info
+    
     log_success "Global settings configured successfully"
 }
 
@@ -233,39 +243,39 @@ generate_certificates_menu() {
         
         case $choice in
             1)
-                collect_company_info
                 configure_pvwa
                 break
                 ;;
             2)
-                collect_company_info
                 configure_psm
                 break
                 ;;
             3)
-                collect_company_info
                 configure_htmlgw
                 break
                 ;;
             4)
-                collect_company_info
                 configure_pta
                 break
                 ;;
             5)
-                collect_company_info
+                configure_vault
+                break
+                ;;
+            6)
                 log_info "Generating certificates for all components..."
                 configure_pvwa
                 configure_psm
                 configure_htmlgw
                 configure_pta
+                configure_vault
                 break
                 ;;
-            6)
+            7)
                 return 0
                 ;;
             *)
-                log_error "Invalid choice. Please select 1-6."
+                log_error "Invalid choice. Please select 1-7."
                 ;;
         esac
     done
@@ -293,7 +303,7 @@ show_current_configuration() {
     if [[ -n "$OUTPUT_DIR" ]] && [[ -d "$OUTPUT_DIR" ]]; then
         echo "Generated Certificate Directories:"
         local found_dirs=false
-        for component in pvwa psm htmlgw pta; do
+        for component in pvwa psm htmlgw pta vault; do
             if [[ -d "$OUTPUT_DIR/$component" ]]; then
                 echo "  $component: $OUTPUT_DIR/$component"
                 found_dirs=true
@@ -385,6 +395,10 @@ main() {
             2)
                 if [[ -z "$OUTPUT_DIR" ]]; then
                     log_warning "Please configure global settings first"
+                    continue
+                fi
+                if [[ ${#COMPANY_INFO[@]} -eq 0 ]]; then
+                    log_warning "Please configure global settings (company information) first"
                     continue
                 fi
                 generate_certificates_menu

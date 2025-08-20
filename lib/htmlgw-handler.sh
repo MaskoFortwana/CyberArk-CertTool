@@ -164,13 +164,13 @@ generate_htmlgw_single_cert() {
     fi
     
     # Update CN in config file
-    sed -i "s/^CN = .*/CN = $cn_value/" "$config_file"
+    sed_inplace "s/^CN = .*/CN = $cn_value/" "$config_file"
     
     # Update SAN entries in config file
     update_san_entries "$config_file" "${san_entries[@]}"
     
     # Update key length in config file
-    sed -i "s/^default_bits = .*/default_bits = $KEY_LENGTH/" "$config_file"
+    sed_inplace "s/^default_bits = .*/default_bits = $KEY_LENGTH/" "$config_file"
     
     # Generate private key and CSR
     local key_file="$htmlgw_dir/htmlgw.key"
@@ -228,14 +228,14 @@ generate_htmlgw_multiple_certs() {
         update_config_file "$config_file"
         
         # Configure CN and SAN for this server
-        sed -i "s/^CN = .*/CN = $server_fqdn/" "$config_file"
+        sed_inplace "s/^CN = .*/CN = $server_fqdn/" "$config_file"
         
         # Update SAN entry
         local san_entries=("DNS.1 = $server_fqdn")
         update_san_entries "$config_file" "${san_entries[@]}"
         
         # Update key length in config file
-        sed -i "s/^default_bits = .*/default_bits = $KEY_LENGTH/" "$config_file"
+        sed_inplace "s/^default_bits = .*/default_bits = $KEY_LENGTH/" "$config_file"
         
         # Generate private key and CSR
         local key_file="$server_dir/htmlgw-server$server_num.key"
@@ -272,7 +272,7 @@ generate_htmlgw_multiple_certs() {
 create_htmlgw_instructions() {
     local htmlgw_dir="$1"
     local cert_type="$2"
-    local num_servers="$3"
+    local num_servers="${3:-0}"
     
     local instructions_file="$htmlgw_dir/HTML5GW-INSTRUCTIONS.txt"
     
