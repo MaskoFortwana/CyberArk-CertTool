@@ -12,11 +12,11 @@ This tool streamlines the certificate generation process for CyberArk environmen
 
 ## Supported Components
 
-- **PVWA** (Password Vault Web Access) - PFX Files
-- **PSM** (Privileged Session Manager) - PFX Files  
-- **HTML5GW** (HTML5 Gateway) - Password-protected PFX + separate Base64 files
-- **PTA** (Privileged Threat Analytics) - PFX Files with whole cert chain
-- **VAULT** (Digital Vault) - PFX Files
+- PVWA (Password Vault Web Access) — PFX files (password optional)
+- PSM (Privileged Session Manager) — PFX files (password optional)
+- HTML5GW (HTML5 Gateway) — PFX files (password optional) + separate Base64 files
+- PTA (Privileged Threat Analytics) — PFX files (password optional) + Base64 key/cert files; optional CA chain embedding
+- Vault (Digital Vault) — PFX files (password required)
 
 
 ## Prerequisites
@@ -69,37 +69,41 @@ This tool streamlines the certificate generation process for CyberArk environmen
 - Place CA chain files in appropriate locations
 
 ### 5. Format Conversion
-- Convert signed certificates to component-specific formats
-- Generate password-protected PFX files where required
-- Create separate key/cert files for components that need them
+- Convert signed certificates to component-specific formats (Option 3)
+- Choose per component whether to password-protect the PFX (Vault is always protected)
+- HTML5GW and PTA also keep Base64 key/cert files alongside PFX for deployment flexibility
 
 ## Directory Structure
 
 ```
 $OUTPUT_DIR/
 ├── pvwa/                   # PVWA certificates
-│   ├── pvwa.key           # Private key
-│   ├── pvwa.csr           # Certificate signing request
-│   ├── pvwa.crt           # Signed certificate (after CA)
-│   ├── pvwa.pfx           # Final PFX file
+│   ├── pvwa.key            # Private key
+│   ├── pvwa.csr            # Certificate signing request
+│   ├── pvwa.crt            # Signed certificate (after CA)
+│   ├── pvwa.pfx            # Final PFX file
+│   ├── pvwa-password.txt   # Present if password protection enabled
 │   └── PVWA-INSTRUCTIONS.txt
 ├── psm/                    # PSM certificates
 │   ├── psm.key
 │   ├── psm.csr
 │   ├── psm.crt
 │   ├── psm.pfx
+│   ├── psm-password.txt    # Present if password protection enabled
 │   └── PSM-INSTRUCTIONS.txt
 ├── htmlgw/                 # HTML5GW certificates
 │   ├── htmlgw.key
 │   ├── htmlgw.csr
 │   ├── htmlgw.crt
 │   ├── htmlgw.pfx
-│   ├── htmlgw-password.txt
+│   ├── htmlgw-password.txt # Present if password protection enabled
 │   └── HTML5GW-INSTRUCTIONS.txt
 └── pta/                    # PTA certificates
     ├── pta.key
     ├── pta.csr
     ├── pta.crt
+    ├── pta.pfx
+    ├── pta-password.txt    # Present if password protection enabled
     └── PTA-INSTRUCTIONS.txt
 ```
 
@@ -118,22 +122,28 @@ $OUTPUT_DIR/
 ## Component-Specific Requirements
 
 ### PVWA & PSM
-- **Format:** Unprotected PFX files
-- **Key Usage:** Server Authentication
-- **Deployment:** Copy PFX to server and follow CyberArk documentation
+- Format: PFX files (password optional). If enabled, a random password is generated and stored next to the PFX (chmod 600).
+- Deployment: Copy the PFX to the server and follow CyberArk documentation.
 
 ### HTML5GW
-- **Formats:** 
-  - Password-protected PFX file
+- Formats:
+  - PFX file (password optional)
   - Separate key/cert files in Base64 format
   - CA chain in Base64 format
-- **Security:** Random password generated and stored
-- **Deployment:** Use both PFX and separate files as needed
+- Security: If password enabled, a random password is generated and stored alongside the PFX.
+- Deployment: Use both PFX and separate files as needed.
 
 ### PTA
-- **Format:** Separate key/cert files in Base64 format only
-- **Limitation:** Maximum 2 PTA nodes supported
-- **Deployment:** Copy individual files to PTA servers
+- Formats:
+  - PFX file (password optional)
+  - Base64 key/cert files retained
+- Optional chain embedding: During conversion, you may provide paths to Intermediate and/or Root CA certificates; they will be embedded in the PFX if provided. If none are provided, the tool will use ca-chain.crt in the PTA directory when available.
+- Limitation: Maximum 2 PTA nodes supported.
+- Deployment: Use the PFX, and keep Base64 files as needed for integrations.
+
+### Vault
+- Format: PFX files (password required, generated automatically and stored next to the PFX).
+- Deployment: Copy per-node PFX files as required by your Vault procedure.
 
 ## Multi-Server Configurations
 
@@ -151,7 +161,8 @@ When not using load balancers:
 ## Security Considerations
 
 - Private key files (.key) are created with 600 permissions
-- PFX passwords are randomly generated (24 characters)
+- PFX passwords, when enabled, are randomly generated (24 characters) and stored in -password.txt files with chmod 600
+- Vault PFX is always password-protected
 - Company information is validated for proper DN formatting
 - Certificate and key matching is verified before conversion
 
@@ -212,7 +223,11 @@ For issues related to:
 
 ## Version History
 
-- **v1.0.0** - Initial release with full component support
+- v1.1.0
+  - Option 3 enhancements: optional PFX passwords for PVWA/PSM/HTML5GW; Vault PFX mandatory; PTA now produces PFX
+  - PTA conversion can embed Intermediate and/or Root CA in PFX when paths are provided
+  - Updated help text and instructions accordingly
+- v1.0.0 — Initial release
 
 ## License
 
