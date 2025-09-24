@@ -11,6 +11,7 @@ L = SomeCity
 O = SomeCompany
 OU = IT
 CN = vault.example.com
+emailAddress = Email Address
 
 [v3_req]
 keyUsage = critical, digitalSignature, keyEncipherment

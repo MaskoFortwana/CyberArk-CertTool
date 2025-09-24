@@ -114,6 +114,10 @@ configure_psm() {
         esac
     done
     
+    # Collect additional SANs for PSM
+    echo ""
+    collect_additional_sans "PSM"
+    
     # Generate certificates based on strategy
     if [[ "$cert_strategy" == "1" ]]; then
         generate_psm_single_cert "$lb_fqdn" "${server_fqdns[@]}"
@@ -165,6 +169,9 @@ generate_psm_single_cert() {
     
     # Update CN in config file
     sed_inplace "s/^CN = .*/CN = $cn_value/" "$config_file"
+    
+    # Merge additional SANs with existing SANs
+    merge_additional_sans san_entries
     
     # Update SAN entries in config file
     update_san_entries "$config_file" "${san_entries[@]}"
@@ -232,6 +239,10 @@ generate_psm_multiple_certs() {
         
         # Update SAN entry
         local san_entries=("DNS.1 = $server_fqdn")
+        
+        # Merge additional SANs with existing SANs
+        merge_additional_sans san_entries
+        
         update_san_entries "$config_file" "${san_entries[@]}"
         
         # Update key length in config file

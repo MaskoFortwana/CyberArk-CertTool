@@ -153,6 +153,10 @@ configure_vault() {
                 ;;
         esac
     done
+    
+    # Collect additional SANs for Vault
+    echo ""
+    collect_additional_sans "Vault"
 
     generate_vault_certs "$num_nodes" "${node_fqdns[@]}" '|' "${node_hosts[@]}" '|' "${node_ips[@]}"
 }
@@ -211,6 +215,9 @@ generate_vault_certs() {
             san_entries+=("IP.$ip_index = $ip")
             ((ip_index++))
         done
+        
+        # Merge additional SANs with existing SANs
+        merge_additional_sans san_entries
 
         vault_update_san_entries "$config_file" "${san_entries[@]}"
 

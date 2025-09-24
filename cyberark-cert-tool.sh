@@ -224,7 +224,7 @@ configure_global_settings() {
     # Company information (collect once globally)
     echo ""
     echo "Company Information Configuration:"
-    echo "This information (C, ST, L, O, OU) will be applied to all certificates."
+    echo "This information (C, ST, L, O, OU, emailAddress) will be applied to all certificates."
     collect_company_info
     
     log_success "Global settings configured successfully"
@@ -298,6 +298,7 @@ show_current_configuration() {
         echo "Company Information: Not configured"
     fi
     echo ""
+    
     
     # Show available certificate directories
     if [[ -n "$OUTPUT_DIR" ]] && [[ -d "$OUTPUT_DIR" ]]; then
