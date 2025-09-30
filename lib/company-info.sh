@@ -20,35 +20,35 @@ collect_company_info() {
     echo -e "${BLUE}State/Province (ST):${NC}"
     echo "The full name of the state or province where your organization is located."
     echo "Examples: California, New York, Ontario, Bavaria"
-    local state=$(get_input "Enter state/province name" "text" "")
+    local state=$(get_input "Enter state/province name" "text_optional" "")
     
     # City/Locality (L)
     echo ""
     echo -e "${BLUE}City/Locality (L):${NC}"
     echo "The city where your organization is located."
     echo "Examples: San Francisco, New York, Toronto, Munich"
-    local city=$(get_input "Enter city/locality name" "text" "")
+    local city=$(get_input "Enter city/locality name" "text_optional" "")
     
     # Organization (O)
     echo ""
     echo -e "${BLUE}Organization (O):${NC}"
     echo "The legal name of your organization/company."
     echo "Examples: ACME Corporation, Example Bank Ltd, MyCompany Inc"
-    local organization=$(get_input "Enter organization name" "text" "")
+    local organization=$(get_input "Enter organization name" "text_optional" "")
     
     # Organizational Unit (OU)
     echo ""
     echo -e "${BLUE}Organizational Unit (OU):${NC}"
     echo "The department or division within your organization."
     echo "Examples: IT Department, Information Security, Infrastructure"
-    local org_unit=$(get_input "Enter organizational unit" "text" "IT")
+    local org_unit=$(get_input "Enter organizational unit" "text_optional" "IT")
     
     # Email Address (emailAddress)
     echo ""
     echo -e "${BLUE}Email Address (emailAddress):${NC}"
     echo "Contact email address for certificate notifications and correspondence."
     echo "Examples: admin@company.com, certificates@organization.org"
-    local email=$(get_input "Enter email address" "email" "")
+    local email=$(get_input "Enter email address" "email_optional" "")
     
     # Store company information globally
     COMPANY_INFO=(
@@ -103,17 +103,19 @@ update_config_file() {
     # Read the file and update DN fields
     while IFS= read -r line; do
         if [[ "$line" =~ ^C[[:space:]]*= ]]; then
+            # Country is required (validated elsewhere); always write
             echo "${COMPANY_INFO[0]}"
         elif [[ "$line" =~ ^ST[[:space:]]*= ]]; then
-            echo "${COMPANY_INFO[1]}"
+            # Only write if non-empty
+            if [[ -n "${COMPANY_INFO[1]#ST=}" ]]; then echo "${COMPANY_INFO[1]}"; fi
         elif [[ "$line" =~ ^L[[:space:]]*= ]]; then
-            echo "${COMPANY_INFO[2]}"
+            if [[ -n "${COMPANY_INFO[2]#L=}" ]]; then echo "${COMPANY_INFO[2]}"; fi
         elif [[ "$line" =~ ^O[[:space:]]*= ]]; then
-            echo "${COMPANY_INFO[3]}"
+            if [[ -n "${COMPANY_INFO[3]#O=}" ]]; then echo "${COMPANY_INFO[3]}"; fi
         elif [[ "$line" =~ ^OU[[:space:]]*= ]]; then
-            echo "${COMPANY_INFO[4]}"
+            if [[ -n "${COMPANY_INFO[4]#OU=}" ]]; then echo "${COMPANY_INFO[4]}"; fi
         elif [[ "$line" =~ ^emailAddress[[:space:]]*= ]]; then
-            echo "${COMPANY_INFO[5]}"
+            if [[ -n "${COMPANY_INFO[5]#emailAddress=}" ]]; then echo "${COMPANY_INFO[5]}"; fi
         else
             echo "$line"
         fi
@@ -358,6 +360,15 @@ get_input() {
                     log_error "Invalid input. Please enter 1-64 characters using only letters, numbers, spaces, and basic punctuation."
                 fi
                 ;;
+            "text_optional")
+                # Allow empty; if not empty, validate
+                if [[ -z "$input" ]] || validate_text_input "$input"; then
+                    echo "$input"
+                    return 0
+                else
+                    log_error "Invalid input. Please use 1-64 allowed characters or leave blank."
+                fi
+                ;;
             "country")
                 if [[ "$input" =~ ^[A-Z]{2}$ ]]; then
                     echo "$input"
@@ -372,6 +383,14 @@ get_input() {
                     return 0
                 else
                     log_error "Invalid email format. Please enter a valid email address (e.g., user@company.com)."
+                fi
+                ;;
+            "email_optional")
+                if [[ -z "$input" ]] || validate_email_input "$input"; then
+                    echo "$input"
+                    return 0
+                else
+                    log_error "Invalid email format. Enter a valid address or leave blank."
                 fi
                 ;;
             *)
