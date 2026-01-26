@@ -124,7 +124,7 @@ configure_pta() {
     if [[ "$cert_strategy" == "1" ]]; then
         generate_pta_single_cert "$lb_fqdn" "${server_fqdns[@]}"
     else
-        generate_pta_multiple_certs "${server_fqdns[@]}"
+        generate_pta_multiple_certs "$lb_fqdn" "${server_fqdns[@]}"
     fi
 }
 
@@ -211,6 +211,8 @@ generate_pta_single_cert() {
 
 # Generate unique certificates for each PTA server
 generate_pta_multiple_certs() {
+    local lb_fqdn="$1"
+    shift
     local server_fqdns=("$@")
     
     log_info "Generating unique certificates for each PTA server..."
@@ -239,8 +241,13 @@ generate_pta_multiple_certs() {
         # Configure CN and SAN for this server
         sed_inplace "s/^CN = .*/CN = $server_fqdn/" "$config_file"
         
-        # Update SAN entry
+        # Update SAN entries - start with server FQDN
         local san_entries=("DNS.1 = $server_fqdn")
+        
+        # Add load balancer FQDN if configured
+        if [[ -n "$lb_fqdn" ]]; then
+            san_entries+=("DNS.2 = $lb_fqdn")
+        fi
         
         # Merge additional SANs with existing SANs
         merge_additional_sans san_entries
