@@ -45,12 +45,44 @@ This tool streamlines the certificate generation process for CyberArk environmen
    - Place signed certificates back in generated directories
    - Convert certificates to required formats
 
+## Organization Configuration
+
+The tool uses a file-based configuration system for organization information. On first run, if `organization.txt` doesn't exist in your output directory, the tool will create a template for you.
+
+### organization.txt Format
+
+```ini
+# Organization Information for Certificate Generation
+[Country] = US
+[State/Province/Country] = California
+[Locality] = San Francisco
+[Organisation] = ACME Corporation
+[Organisational Unit] = IT Department
+[Email Address] = certificates@example.com
+[Load-Balancer] = lb.example.com
+```
+
+**Field Descriptions:**
+- `[Country]` - Required. 2-letter ISO country code (e.g., US, GB, DE, SK)
+- `[State/Province/Country]` - Optional. Full name of state or province
+- `[Locality]` - Optional. City name
+- `[Organisation]` - Optional. Legal name of your organization
+- `[Organisational Unit]` - Optional. Department or division name
+- `[Email Address]` - Optional. Contact email for certificate correspondence
+- `[Load-Balancer]` - Optional. Default load balancer FQDN for multi-server setups
+
+**Notes:**
+- Empty fields are automatically ignored
+- The load balancer FQDN from this file will be offered as the default for all components
+- You can override the default load balancer or skip it during certificate generation
+- This file can be version controlled for easy reuse
+
 ## Workflow
 
 ### 1. Initial Setup
 - Configure key length (4096+ bits recommended)
 - Set output directory for all certificate files
-- Enter company information for Distinguished Name
+- Create and fill in `organization.txt` in the output directory (auto-generated template on first run)
 
 ### 2. Certificate Generation
 - Select CyberArk components to configure
@@ -77,6 +109,7 @@ This tool streamlines the certificate generation process for CyberArk environmen
 
 ```
 $OUTPUT_DIR/
+├── organization.txt        # Organization configuration file
 ├── pvwa/                   # PVWA certificates
 │   ├── pvwa.key            # Private key
 │   ├── pvwa.csr            # Certificate signing request
