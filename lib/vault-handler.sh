@@ -228,7 +228,7 @@ generate_vault_certs() {
         local key_file="$node_dir/vault-node$node_num.key"
         local csr_file="$node_dir/vault-node$node_num.csr"
 
-        if generate_private_key "$key_file" "$KEY_LENGTH" && generate_csr "$key_file" "$config_file" "$csr_file"; then
+        if generate_private_key "$key_file" "$KEY_LENGTH" && generate_csr "$key_file" "$config_file" "$csr_file" "sha512"; then
             log_success "Generated for node $node_num"
             verify_csr "$csr_file"
         else

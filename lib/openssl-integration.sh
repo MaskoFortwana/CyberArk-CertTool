@@ -28,6 +28,7 @@ generate_csr() {
     local key_file="$1"
     local config_file="$2"
     local output_file="$3"
+    local signature_algorithm="${4:-sha256}"  # Default to sha256, can be overridden
     
     log_info "Generating Certificate Signing Request (CSR)..."
     
@@ -41,7 +42,7 @@ generate_csr() {
         return 1
     fi
     
-    if openssl req -new -key "$key_file" -config "$config_file" -out "$output_file" 2>/dev/null; then
+    if openssl req -new -"$signature_algorithm" -key "$key_file" -config "$config_file" -out "$output_file" 2>/dev/null; then
         log_success "CSR generated: $output_file"
         return 0
     else

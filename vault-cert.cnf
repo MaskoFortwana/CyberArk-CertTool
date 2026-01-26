@@ -14,18 +14,11 @@ CN = vault.example.com
 emailAddress = Email Address
 
 [v3_req]
-keyUsage = critical, digitalSignature, keyEncipherment
-extendedKeyUsage = serverAuth, clientAuth
-basicConstraints = critical, CA:FALSE
+keyUsage = digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
 subjectAltName = @alt_names
 
 [alt_names]
 DNS.1 = vault1
 DNS.2 = vault1.example.com
-IP.1 = 192.168.1.1
-
-[v3_ca]
-keyUsage = critical, digitalSignature, keyEncipherment
-extendedKeyUsage = serverAuth, clientAuth
-basicConstraints = critical, CA:FALSE
-subjectAltName = @alt_names
+IP.1 = ***********
