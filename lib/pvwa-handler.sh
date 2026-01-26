@@ -35,7 +35,28 @@ configure_pvwa() {
     local has_loadbalancer="n"
     local lb_fqdn=""
     
-    if [[ $num_servers -gt 1 ]]; then
+    # Check if load balancer is defined in organization.txt
+    if [[ -n "$LOAD_BALANCER_FQDN" ]]; then
+        echo "Load balancer from organization.txt: $LOAD_BALANCER_FQDN"
+        while true; do
+            read -p "Use this load balancer for PVWA? (y/n): " has_loadbalancer
+            case $has_loadbalancer in
+                [Yy]*)
+                    lb_fqdn="$LOAD_BALANCER_FQDN"
+                    break
+                    ;;
+                [Nn]*)
+                    if [[ $num_servers -gt 1 ]]; then
+                        lb_fqdn=$(get_input "Enter different load balancer FQDN (or leave empty for none)" "fqdn_optional" "")
+                    fi
+                    break
+                    ;;
+                *)
+                    log_error "Please answer y or n"
+                    ;;
+            esac
+        done
+    elif [[ $num_servers -gt 1 ]]; then
         while true; do
             read -p "Do you have a load balancer for PVWA? (y/n): " has_loadbalancer
             case $has_loadbalancer in

@@ -3,52 +3,98 @@
 # Company Information Collection Module
 # Handles collection and validation of Distinguished Name (DN) components
 
-# Collect company information for certificate DN
-collect_company_info() {
-    echo -e "${CYAN}=== Company Information Collection ===${NC}"
-    echo "This information will be used in the Distinguished Name (DN) of all certificates."
-    echo ""
+# Global variable for load balancer FQDN from organization file
+LOAD_BALANCER_FQDN=""
+
+# Create template organization.txt file
+create_organization_template() {
+    local org_file="$1"
     
-    # Country (C)
-    echo -e "${BLUE}Country Code (C):${NC}"
-    echo "This is the 2-letter ISO country code where your organization is located."
-    echo "Examples: US (United States), GB (United Kingdom), DE (Germany), CA (Canada)"
-    local country=$(get_input "Enter country code" "country" "US")
+    cat > "$org_file" << 'EOF'
+# Organization Information for Certificate Generation
+# This file contains the Distinguished Name (DN) components for SSL certificates.
+# Fill in the values below. Empty fields will be ignored.
+# Do not modify the field names in square brackets.
+
+[Country] = US
+[State/Province/Country] = California
+[Locality] = San Francisco
+[Organisation] = ACME Corporation
+[Organisational Unit] = IT Department
+[Email Address] = certificates@example.com
+[Load-Balancer] = lb.example.com
+
+# Field Descriptions:
+# [Country]                  - 2-letter ISO country code (e.g., US, GB, DE)
+# [State/Province/Country]   - Full name of state or province
+# [Locality]                 - City name
+# [Organisation]             - Legal name of your organization
+# [Organisational Unit]      - Department or division name
+# [Email Address]            - Contact email for certificate correspondence
+# [Load-Balancer]            - Load balancer FQDN (used for multi-server setups)
+EOF
     
-    # State/Province (ST)
-    echo ""
-    echo -e "${BLUE}State/Province (ST):${NC}"
-    echo "The full name of the state or province where your organization is located."
-    echo "Examples: California, New York, Ontario, Bavaria"
-    local state=$(get_input "Enter state/province name" "text_optional" "")
+    chmod 644 "$org_file"
+}
+
+# Parse organization.txt file
+parse_organization_file() {
+    local org_file="$1"
+    local country=""
+    local state=""
+    local city=""
+    local organization=""
+    local org_unit=""
+    local email=""
+    local lb_fqdn=""
     
-    # City/Locality (L)
-    echo ""
-    echo -e "${BLUE}City/Locality (L):${NC}"
-    echo "The city where your organization is located."
-    echo "Examples: San Francisco, New York, Toronto, Munich"
-    local city=$(get_input "Enter city/locality name" "text_optional" "")
+    while IFS= read -r line; do
+        # Skip comments and empty lines
+        [[ "$line" =~ ^[[:space:]]*# ]] && continue
+        [[ -z "${line// /}" ]] && continue
+        
+        # Parse key-value pairs
+        if [[ "$line" =~ ^\[Country\][[:space:]]*=[[:space:]]*(.*)$ ]]; then
+            country="${BASH_REMATCH[1]}"
+            country="${country## }"
+            country="${country%% }"
+        elif [[ "$line" =~ ^\[State/Province/Country\][[:space:]]*=[[:space:]]*(.*)$ ]]; then
+            state="${BASH_REMATCH[1]}"
+            state="${state## }"
+            state="${state%% }"
+        elif [[ "$line" =~ ^\[Locality\][[:space:]]*=[[:space:]]*(.*)$ ]]; then
+            city="${BASH_REMATCH[1]}"
+            city="${city## }"
+            city="${city%% }"
+        elif [[ "$line" =~ ^\[Organisation\][[:space:]]*=[[:space:]]*(.*)$ ]]; then
+            organization="${BASH_REMATCH[1]}"
+            organization="${organization## }"
+            organization="${organization%% }"
+        elif [[ "$line" =~ ^\[Organisational[[:space:]]Unit\][[:space:]]*=[[:space:]]*(.*)$ ]]; then
+            org_unit="${BASH_REMATCH[1]}"
+            org_unit="${org_unit## }"
+            org_unit="${org_unit%% }"
+        elif [[ "$line" =~ ^\[Email[[:space:]]Address\][[:space:]]*=[[:space:]]*(.*)$ ]]; then
+            email="${BASH_REMATCH[1]}"
+            email="${email## }"
+            email="${email%% }"
+        elif [[ "$line" =~ ^\[Load-Balancer\][[:space:]]*=[[:space:]]*(.*)$ ]]; then
+            lb_fqdn="${BASH_REMATCH[1]}"
+            lb_fqdn="${lb_fqdn## }"
+            lb_fqdn="${lb_fqdn%% }"
+        fi
+    done < "$org_file"
     
-    # Organization (O)
-    echo ""
-    echo -e "${BLUE}Organization (O):${NC}"
-    echo "The legal name of your organization/company."
-    echo "Examples: ACME Corporation, Example Bank Ltd, MyCompany Inc"
-    local organization=$(get_input "Enter organization name" "text_optional" "")
+    # Validate country code (required)
+    if [[ -z "$country" ]]; then
+        log_error "Country code is required in organization.txt"
+        return 1
+    fi
     
-    # Organizational Unit (OU)
-    echo ""
-    echo -e "${BLUE}Organizational Unit (OU):${NC}"
-    echo "The department or division within your organization."
-    echo "Examples: IT Department, Information Security, Infrastructure"
-    local org_unit=$(get_input "Enter organizational unit" "text_optional" "IT")
-    
-    # Email Address (emailAddress)
-    echo ""
-    echo -e "${BLUE}Email Address (emailAddress):${NC}"
-    echo "Contact email address for certificate notifications and correspondence."
-    echo "Examples: admin@company.com, certificates@organization.org"
-    local email=$(get_input "Enter email address" "email_optional" "")
+    if [[ ! "$country" =~ ^[A-Z]{2}$ ]]; then
+        log_error "Invalid country code in organization.txt. Must be 2-letter code (e.g., US, GB)"
+        return 1
+    fi
     
     # Store company information globally
     COMPANY_INFO=(
@@ -60,25 +106,79 @@ collect_company_info() {
         "emailAddress=$email"
     )
     
-    # Display collected information for confirmation
-    echo ""
-    echo -e "${CYAN}=== Collected Company Information ===${NC}"
-    for info in "${COMPANY_INFO[@]}"; do
-        echo "  $info"
-    done
+    # Store load balancer FQDN globally
+    LOAD_BALANCER_FQDN="$lb_fqdn"
+    
+    return 0
+}
+
+# Collect company information from organization.txt file
+collect_company_info() {
+    local org_file="$OUTPUT_DIR/organization.txt"
+    
+    echo -e "${CYAN}=== Company Information Collection ===${NC}"
+    echo "Looking for organization information file: $org_file"
     echo ""
     
+    # Check if organization.txt exists
+    if [[ ! -f "$org_file" ]]; then
+        log_warning "Organization file not found: $org_file"
+        echo ""
+        log_info "Creating template organization.txt file..."
+        
+        create_organization_template "$org_file"
+        
+        log_success "Template created: $org_file"
+        echo ""
+        echo -e "${YELLOW}ACTION REQUIRED:${NC}"
+        echo "1. Edit the file: $org_file"
+        echo "2. Fill in your organization information"
+        echo "3. Save the file and re-run this script"
+        echo ""
+        echo "The template contains example values that you should replace with your actual information."
+        echo ""
+        
+        return 1
+    fi
+    
+    # Parse the organization file
+    log_info "Reading organization information from: $org_file"
+    
+    if ! parse_organization_file "$org_file"; then
+        log_error "Failed to parse organization file"
+        return 1
+    fi
+    
+    # Display parsed information for confirmation
+    echo ""
+    echo -e "${CYAN}=== Organization Information ===${NC}"
+    for info in "${COMPANY_INFO[@]}"; do
+        # Only display non-empty fields
+        local key="${info%%=*}"
+        local value="${info#*=}"
+        if [[ -n "$value" ]]; then
+            echo "  $info"
+        fi
+    done
+    
+    if [[ -n "$LOAD_BALANCER_FQDN" ]]; then
+        echo "  Load-Balancer=$LOAD_BALANCER_FQDN"
+    fi
+    echo ""
+    
+    # Ask for confirmation
     while true; do
         read -p "Is this information correct? (y/n): " confirm
         case $confirm in
             [Yy]*)
-                log_success "Company information saved successfully"
+                log_success "Company information confirmed"
                 return 0
                 ;;
             [Nn]*)
-                log_info "Re-collecting company information..."
-                collect_company_info
-                return 0
+                echo ""
+                log_info "Please edit the file: $org_file"
+                log_info "After making changes, re-run this script"
+                return 1
                 ;;
             *)
                 log_error "Please answer y or n"
@@ -391,6 +491,18 @@ get_input() {
                     return 0
                 else
                     log_error "Invalid email format. Enter a valid address or leave blank."
+                fi
+                ;;
+            "fqdn_optional")
+                # Allow empty; if not empty, validate as FQDN
+                if [[ -z "$input" ]]; then
+                    echo ""
+                    return 0
+                elif validate_san_input "$input"; then
+                    echo "$input"
+                    return 0
+                else
+                    log_error "Invalid FQDN format. Enter a valid domain name or leave blank."
                 fi
                 ;;
             *)
